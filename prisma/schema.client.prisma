@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/clientForShift"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_CLIENT_URL")
+}
+
+model AuthUser {
+  authUserId Int    @unique
+  clientId   Int    @unique
+  Client     Client @relation(fields: [clientId], references: [id])
+
+  @@unique([authUserId, clientId])
+}
+
+model Client {
+  id                 Int                    @id @default(autoincrement())
+  companyName        String
+  companyNameKana    String
+  postalCode         String
+  prefecture         String
+  area               String
+  building           String?
+  contractStartDate  DateTime?
+  contractStatus     CLIENT_CONTRACT_STATUS @default(DRAFT)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime
+  paymentType        PAYMENT_TYPE?
+  AuthUser           AuthUser?
+  ContactPerson      ContactPerson?
+  PaymentCardInfo    PaymentCardInfo?
+  PaymentInvoiceInfo PaymentInvoiceInfo?
+}
+
+model ContactPerson {
+  id            Int    @id @default(autoincrement())
+  clientId      Int    @unique
+  firstName     String
+  lastName      String
+  firstNameKana String
+  lastNameKana  String
+  phoneNumber   String
+  Client        Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model PaymentCardInfo {
+  id             Int     @id @default(autoincrement())
+  clientId       Int     @unique
+  fullName       String
+  cardNumber     String
+  expirationDate String
+  cvv            String?
+  Client         Client  @relation(fields: [clientId], references: [id])
+}
+
+model PaymentInvoiceInfo {
+  id          Int     @id @default(autoincrement())
+  clientId    Int     @unique
+  postalcode  String
+  prefecture  String
+  city        String
+  area        String
+  building    String?
+  phoneNumber String
+  Client      Client  @relation(fields: [clientId], references: [id])
+}
+
+enum CLIENT_CONTRACT_STATUS {
+  DRAFT
+  PENDING_APPROVAL
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+  DISABLED
+}
+
+enum PAYMENT_TYPE {
+  CREDIT
+  INVOICE
+}

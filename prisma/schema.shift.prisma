@@ -1,0 +1,171 @@
+generator client {
+  provider = "prisma-client-js"
+  output = "./generated/clientForShift"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_SHIFT_URL")
+}
+
+model Schedule {
+  id      Int            @id @default(autoincrement())
+  storeId String
+  status  ScheduleStatus @default(DRAFT)
+  start   DateTime
+  end     DateTime
+  Store   Store          @relation(fields: [storeId], references: [storeId])
+  Shift   Shift[]
+}
+
+model ScheduleRule {
+  id                   Int      @id @default(autoincrement())
+  dayOfWeek            String
+  isRest               Boolean  @default(false)
+  shiftStartTime       String
+  shiftEndTime         String
+  shiftDurationMinutes Int
+  staffCount           Int
+  storeId              String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime
+  shiftEndDayDiff      Int      @default(0)
+  Store                Store    @relation(fields: [storeId], references: [storeId])
+}
+
+model Shift {
+  id          Int         @id @default(autoincrement())
+  scheduleId  Int?
+  staffId     Int
+  storeId     String
+  status      ShiftStatus @default(REQUEST)
+  startAt     DateTime
+  endAt       DateTime
+  endDayDiff  Int         @default(0)
+  duration    Int
+  managerNote String?
+  isRest      Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime
+  Schedule    Schedule?   @relation(fields: [scheduleId], references: [id])
+  Staff       Staff       @relation(fields: [staffId], references: [id])
+  Store       Store       @relation(fields: [storeId], references: [storeId])
+}
+
+model ShiftPattern {
+  id                   Int     @id @default(autoincrement())
+  staffId              Int
+  dayOfWeek            String
+  isRest               Boolean @default(false)
+  shiftStartTime       String
+  shiftEndDayDiff      Int     @default(0)
+  shiftEndTime         String
+  shiftDurationMinutes Int
+  Staff                Staff   @relation(fields: [staffId], references: [id])
+}
+
+model SpecialRule {
+  id                   Int              @id @default(autoincrement())
+  isRest               Boolean          @default(false)
+  specialRuleGroupId   Int
+  storeId              String
+  shiftStartDateTime   DateTime
+  shiftEndDateTime     DateTime
+  shiftDurationMinutes Int
+  staffCount           Int
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime
+  SpecialRuleGroup     SpecialRuleGroup @relation(fields: [specialRuleGroupId], references: [id], onDelete: Cascade)
+  Store                Store            @relation(fields: [storeId], references: [storeId])
+}
+
+model SpecialRuleGroup {
+  id          Int           @id @default(autoincrement())
+  storeId     String
+  label       String
+  SpecialRule SpecialRule[]
+  Store       Store         @relation(fields: [storeId], references: [storeId])
+}
+
+model Staff {
+  id             Int            @id @default(autoincrement())
+  employeeNumber String?
+  friendId       String
+  storeId        String
+  status         StaffStatus    @default(PENDING)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime
+  managerNotes   String?
+  Shift          Shift[]
+  ShiftPattern   ShiftPattern[]
+  Store          Store          @relation(fields: [storeId], references: [storeId])
+
+  @@unique([friendId, storeId])
+}
+
+model Store {
+  storeId          String             @id
+  lineAccountId    String             @unique
+  clientId         Int
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime
+  Schedule         Schedule[]
+  ScheduleRule     ScheduleRule[]
+  Shift            Shift[]
+  SpecialRule      SpecialRule[]
+  SpecialRuleGroup SpecialRuleGroup[]
+  Staff            Staff[]
+  StoreCalendar    StoreCalendar[]
+  StoreSetting     StoreSetting?
+}
+
+model StoreCalendar {
+  date         DateTime
+  storeId      String
+  isRest       Boolean
+  isConfirmed  Boolean  @default(false)
+  isAdjusted   Boolean  @default(false)
+  isSufficient Boolean
+  dayOfWeek    String
+  Store        Store    @relation(fields: [storeId], references: [storeId])
+
+  @@unique([storeId, date])
+}
+
+model StoreSetting {
+  storeId             String              @id @unique
+  reminderDayGapOne   Int?
+  reminderOne         String?
+  reminderDayGapTwo   Int?
+  reminderTwo         String?
+  reminderDayGapThree Int?
+  reminderThree       String?
+  pattern             ShiftClosurePattern @default(FULL_MONTH)
+  dayOfMonth          Int                 @default(1)
+  firstHalfDate       Int                 @default(16)
+  secondHalfDate      Int                 @default(1)
+  isPublished         Boolean             @default(false)
+  timeDivisionSetting Int                 @default(15)
+  Store               Store               @relation(fields: [storeId], references: [storeId])
+}
+
+enum ScheduleStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum ShiftClosurePattern {
+  FULL_MONTH
+  HALF_MONTH
+}
+
+enum ShiftStatus {
+  REQUEST
+  DRAFT
+  APPROVED
+}
+
+enum StaffStatus {
+  PENDING
+  APPROVED
+}
